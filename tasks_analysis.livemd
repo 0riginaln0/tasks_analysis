@@ -366,12 +366,15 @@ defmodule ViewStatusTimeDistribution do
   def view(chart_data, status) do
     clip_after = 100
 
-    Vl.new(width: 700, height: 500, title: "Распределение #{status}")
+    Vl.new(width: 700, height: 500, title: "Распределение времени жизни задач в статусе #{status}")
     |> Vl.data_from_values(chart_data, only: ["x_data", "y_data"])
     |> Vl.mark(:bar)
     # |> Vl.transform(filter: "datum.x_data <= #{clip_after}")
     # |> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время в состоянии (дни)", scale: [domain_min: 0, domain_max: clip_after, zero: true])
-      |> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время в состоянии (дни)", scale: [type: :pow, exponent: 0.3, domain_min: 0, zero: true])
+      |> Vl.encode_field(:x, "x_data", 
+          type: :quantitative, title: "Время в состоянии (дни)",
+          scale: [type: :pow, exponent: 0.5, domain_min: 0, zero: true]
+      )
     |> Vl.encode_field(:y, "y_data", type: :quantitative, title: "Частота встречаемости")
 
   end
