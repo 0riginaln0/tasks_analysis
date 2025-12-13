@@ -605,7 +605,7 @@ Vl.new(width: 600, height: 300, title: ["Количество открытых �
 |> Vl.resolve(:scale, y: :independent)
 ```
 
-## 4.
+## 4. Самые активные пользователи
 
 построить график, выражающий общее количество задач для пользователей, в которых он указан как исполнитель и репортер. По оси абсцисс – расположить количество задач. По оси ординат – расположить имя пользователя. Отразить график для 30 топовых пользователей с максимальным количеством задач;
 
@@ -735,10 +735,124 @@ Vl.new()
                    sort: [field: "total", order: "descending"])
 ```
 
-## 5.
+## 5. Время работы пользователя на задачах
 
 построить гистограмму, отражающую время, которое затратил
 пользователь на ее выполнение на основе залогированного времени. По оси
 абсцисс – расположить время. По оси ординат – расположить суммарное
 количество задач, которое соответствует этому времени. В расчет брать только
 закрытые задачи по проекту
+
+```elixir
+# 5. Гистограмма времени выполнения задач пользователем на основе залогированного времени
+
+defmodule WorklogFetcher do
+  def fetch_all_closed_issues_with_worklogs(base_url, headers, project_key) do
+    jql = "project = #{project_key} AND statusCategory = Done"
+
+    Stream.resource(
+      fn -> 0 end,
+      fn start_at ->
+        # Запрашиваем worklog для каждой задачи
+        case fetch_page(base_url, headers, jql, start_at, "worklog", "") do
+          {:ok, %{"issues" => issues, "total" => total}} ->
+            if issues == [] or start_at >= total do
+              {:halt, start_at}
+            else
+              {issues, start_at + length(issues)}
+            end
+          _ -> {:halt, start_at}
+        end
+      end,
+      fn _ -> :ok end
+    )
+    |> Enum.to_list()
+  end
+
+  defp fetch_page(base_url, headers, jql, start_at, fields, expand) do
+    url = "#{base_url}/search"
+    params = [
+      jql: jql,
+      startAt: start_at,
+      maxResults: 100,
+      fields: fields,
+      expand: expand
+    ]
+    
+    case Req.get(url, headers: headers, params: params) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body}
+      {:ok, response} ->
+        IO.inspect(response, label: "Ошибка запроса")
+        {:error, response}
+    end
+  end
+end
+```
+
+```elixir
+IO.puts("Загружаем закрытые задачи с worklog...")
+issues_with_worklogs = WorklogFetcher.fetch_all_closed_issues_with_worklogs(jira_url, headers, kafka)
+
+IO.puts("Загружено задач: #{Enum.count(issues_with_worklogs)}")
+```
+
+```elixir
+Enum.random(issues_with_worklogs)
+```
+
+```elixir
+# Анализируем worklog для каждой задачи
+defmodule WorklogAnalyzer do
+  def calculate_user_time_per_issue(issues) do
+    Enum.flat_map(issues, fn issue ->
+      case issue["fields"]["worklog"] do
+        %{"worklogs" => worklogs} when is_list(worklogs) ->
+          # Группируем время по пользователям для этой задачи
+          user_time = 
+            worklogs
+            |> Enum.group_by(fn worklog -> 
+                worklog["author"]["displayName"] || worklog["author"]["name"]
+              end)
+            |> Enum.map(fn {user, logs} ->
+                total_seconds = Enum.reduce(logs, 0, fn log, acc ->
+                  acc + (log["timeSpentSeconds"] || 0)
+                end)
+                %{
+                  issue_key: issue["key"],
+                  user: user,
+                  total_seconds: total_seconds,
+                  total_hours: total_seconds / 3600,
+                  worklogs_count: length(logs)
+                }
+              end)
+          
+          # Если в задаче есть worklog, возвращаем данные
+          if user_time != [] do
+            user_time
+          else
+            []
+          end
+        _ ->
+          []
+      end
+    end)
+  end
+
+  def filter_by_min_time(worklog_data, min_seconds \\ 300) do
+    Enum.filter(worklog_data, fn item ->
+      item[:total_seconds] >= min_seconds
+    end)
+  end
+end
+
+# Получаем данные о времени пользователей
+worklog_data = WorklogAnalyzer.calculate_user_time_per_issue(issues_with_worklogs)
+
+IO.puts("Найдено записей worklog: #{Enum.count(worklog_data)}")
+
+# Отфильтруем задачи с очень маленьким временем (меньше 5 минут)
+filtered_worklog_data = WorklogAnalyzer.filter_by_min_time(worklog_data, 300)
+
+IO.puts("После фильтрации (≥5 минут): #{Enum.count(filtered_worklog_data)}")
+
+```
