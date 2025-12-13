@@ -1,0 +1,422 @@
+# Tasks analysis
+
+```elixir
+Mix.install([
+  {:merquery, "~> 0.3.0"},
+  {:req, "~> 0.5.16"},
+  {:kino, "~> 0.18.0"},
+  {:vega_lite, "~> 0.1.11"},
+  {:kino_vega_lite, "~> 0.1.13"},
+  {:jason, "~> 1.4"},
+])
+```
+
+## Введение
+
+Для разработки программного средства для аналитики задач был выбран язык Elixir и проект Livebook.
+
+Для визуализации используется библиотека VegaLite
+
+```elixir
+alias VegaLite, as: Vl
+```
+
+```elixir
+IO.puts "Hello, World"
+```
+
+Для выполнения HTTP запросов в проект добавлены библиотеки
+
+* [req](https://hexdocs.pm/req/readme.html) http client
+* [merquery](https://github.com/acalejos/merquery) smart-cell обёртка над req
+
+```elixir
+{:ok, %{status: st}} = Req.get("https://api.github.com/repos/elixir-lang/elixir")
+st
+```
+
+<!-- livebook:{"attrs":"eyJxdWVyaWVzIjpbeyJhdXRoIjp7InNjaGVtZSI6Im5vbmUiLCJ0eXBlIjowLCJ2YWx1ZSI6IiJ9LCJib2R5Ijp7ImNvbnRlbnRUeXBlIjoibm9uZSIsImZvcm0iOltdLCJyYXciOiIifSwiaGVhZGVycyI6W10sIm9wdGlvbnMiOnsiY29udGVudFR5cGUiOiJlbGl4aXIiLCJyYXciOiIifSwicGFyYW1zIjpbXSwicGx1Z2lucyI6W3siYWN0aXZlIjpmYWxzZSwiZGVzY3JpcHRpb24iOiJBIGNvbGxlY3Rpb24gb2Ygc3RlcHMsIHVzYWJsZSB3aXRoIFJlcS4iLCJuYW1lIjoiQ3VybFJlcS5QbHVnaW4iLCJ2ZXJzaW9uIjpudWxsfV0sInJlcXVlc3RfdHlwZSI6ImdldCIsInN0ZXBzIjp7ImVycm9yX3N0ZXBzIjpbeyJhY3RpdmUiOnRydWUsImRvYyI6IlJldHJpZXMgYSByZXF1ZXN0IGluIGZhY2Ugb2YgZXJyb3JzLiIsIm5hbWUiOiJyZXRyeSJ9XSwicmVxdWVzdF9zdGVwcyI6W3siYWN0aXZlIjp0cnVlLCJkb2MiOiJTZXRzIHRoZSB1c2VyLWFnZW50IGhlYWRlci4iLCJuYW1lIjoicHV0X3VzZXJfYWdlbnQifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiQXNrcyB0aGUgc2VydmVyIHRvIHJldHVybiBjb21wcmVzc2VkIHJlc3BvbnNlLiIsIm5hbWUiOiJjb21wcmVzc2VkIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IkVuY29kZXMgdGhlIHJlcXVlc3QgYm9keS4iLCJuYW1lIjoiZW5jb2RlX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyBiYXNlIFVSTCBmb3IgYWxsIHJlcXVlc3RzLiIsIm5hbWUiOiJwdXRfYmFzZV91cmwifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyByZXF1ZXN0IGF1dGhlbnRpY2F0aW9uLiIsIm5hbWUiOiJhdXRoIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IkFkZHMgcGFyYW1zIHRvIHJlcXVlc3QgcXVlcnkgc3RyaW5nLiIsIm5hbWUiOiJwdXRfcGFyYW1zIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IlVzZXMgYSB0ZW1wbGF0ZWQgcmVxdWVzdCBwYXRoLiIsIm5hbWUiOiJwdXRfcGF0aF9wYXJhbXMifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyB0aGUgXCJSYW5nZVwiIHJlcXVlc3QgaGVhZGVyLiIsIm5hbWUiOiJwdXRfcmFuZ2UifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiUGVyZm9ybXMgSFRUUCBjYWNoaW5nIHVzaW5nIGBpZi1tb2RpZmllZC1zaW5jZWAgaGVhZGVyLiIsIm5hbWUiOiJjYWNoZSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJTZXRzIGFkYXB0ZXIgdG8gYHJ1bl9wbHVnLzFgLiIsIm5hbWUiOiJwdXRfcGx1ZyJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJDb21wcmVzc2VzIHRoZSByZXF1ZXN0IGJvZHkuIiwibmFtZSI6ImNvbXByZXNzX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyBleHBlY3RlZCByZXNwb25zZSBib2R5IGNoZWNrc3VtLiIsIm5hbWUiOiJjaGVja3N1bSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJTaWducyByZXF1ZXN0IHdpdGggQVdTIFNpZ25hdHVyZSBWZXJzaW9uIDQuIiwibmFtZSI6InB1dF9hd3Nfc2lndjQifV0sInJlc3BvbnNlX3N0ZXBzIjpbeyJhY3RpdmUiOnRydWUsImRvYyI6IlJldHJpZXMgYSByZXF1ZXN0IGluIGZhY2Ugb2YgZXJyb3JzLiIsIm5hbWUiOiJyZXRyeSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJIYW5kbGVzIEhUVFAgNHh4LzV4eCBlcnJvciByZXNwb25zZXMuIiwibmFtZSI6ImhhbmRsZV9odHRwX2Vycm9ycyJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJGb2xsb3dzIHJlZGlyZWN0cy4iLCJuYW1lIjoicmVkaXJlY3QifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjpudWxsLCJuYW1lIjoiaHR0cF9kaWdlc3QifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiRGVjb21wcmVzc2VzIHRoZSByZXNwb25zZSBib2R5IGJhc2VkIG9uIHRoZSBgY29udGVudC1lbmNvZGluZ2AgaGVhZGVyLiIsIm5hbWUiOiJkZWNvbXByZXNzX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiVmVyaWZpZXMgdGhlIHJlc3BvbnNlIGJvZHkgY2hlY2tzdW0uIiwibmFtZSI6InZlcmlmeV9jaGVja3N1bSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJEZWNvZGVzIHJlc3BvbnNlIGJvZHkgYmFzZWQgb24gdGhlIGRldGVjdGVkIGZvcm1hdC4iLCJuYW1lIjoiZGVjb2RlX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjpudWxsLCJuYW1lIjoib3V0cHV0In1dfSwidXJsIjoiaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy9lbGl4aXItbGFuZy9lbGl4aXIiLCJ2YXJpYWJsZSI6InJlc3AiLCJ2ZXJicyI6WyJnZXQiLCJwb3N0IiwicHV0IiwicGF0Y2giLCJkZWxldGUiLCJoZWFkIiwib3B0aW9ucyJdfV0sInF1ZXJ5SW5kZXgiOjB9","chunks":null,"kind":"Elixir.Merquery.SmartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+req =
+  Req.new(
+    method: :get,
+    url: "https://api.github.com/repos/elixir-lang/elixir",
+    headers: %{},
+    params: %{}
+  )
+{req, resp} = Req.request(req)
+resp
+```
+
+```elixir
+resp.headers
+
+```
+
+## 0. Общие для всех запросов параметры
+
+```elixir
+jira_url = "https://issues.apache.org/jira/rest/api/2"
+kafka = "KAFKA"
+headers = [{"Accept", "application/json"}]
+
+test_url = "#{jira_url}/project/#{kafka}"
+```
+
+## 1. Время, которое задача провела от момента создания до момента закрытия
+
+Построение гистограммы, отражающей время, которое задача провела в
+открытом состоянии (от момента создания до момента закрытия). По оси
+абсцисс – расположить время. По оси ординат – расположить суммарное
+количество задач, которое было в открытом виде соответствующее время. В
+расчет брать только закрытые задачи по проекту;
+
+```elixir
+defmodule JiraFetcher do
+  def fetch_page(base_url, headers, jql, start_at, fields, expand \\ nil) do
+    url = "#{base_url}/search"
+    params = [
+      jql: jql,
+      startAt: start_at,
+      maxResults: 100,
+      fields: fields,
+    ]
+    params =
+      if expand do
+        Keyword.put(params, :expand, expand)
+      else
+        params
+      end
+    
+    case Req.get(url, headers: headers, params: params) do
+      {:ok, %{status: 200, body: body}} -> {:ok, body}
+      {:ok, response} ->
+        IO.inspect(response, label: "Ошибка запроса")
+        {:error, response}
+    end
+  end
+
+  def fetch_all_closed_issues_with_history(base_url, headers, project_key) do
+    jql = "project = #{project_key} AND status = Closed"
+
+    Stream.resource(
+      fn -> 0 end,
+      fn start_at ->
+        case fetch_page(base_url, headers, jql, start_at, "created,status,updated,resolutiondate", "changelog") do
+          {:ok, %{"issues" => issues, "total" => total}} ->
+            if issues == [] or start_at >= total do
+              {:halt, start_at}
+            else
+              {issues, start_at + length(issues)}
+            end
+          _ -> {:halt, start_at}
+        end
+      end,
+      fn _ -> :ok end
+    )
+    |> Enum.to_list()
+  end
+end
+
+```
+
+```elixir
+all_closed_issues = JiraFetcher.fetch_all_closed_issues_with_history(jira_url, headers, kafka)
+```
+
+```elixir
+all_closed_issues
+|> length()
+
+issue = Enum.at(all_closed_issues, 10)
+
+# Map of `Livespan => Number of issues with that timespan`
+frequencies =
+  all_closed_issues
+  |> Enum.reduce([], fn issue, acc ->
+      closed_at_record = issue["changelog"]["histories"]
+      |> Enum.flat_map(fn entry ->
+        entry["items"]
+        |> Enum.filter(fn item ->
+          item["fromString"] && item["toString"] && item["field"] == "status"
+        end)
+        |> Enum.map(fn item ->
+            %{
+              "created" => entry["created"],
+              "fromString" => item["fromString"],
+              "toString" => item["toString"]
+            }
+        end)
+      end)
+      |> Enum.reverse()
+      |> Enum.find(fn entry ->
+        entry["toString"] == "Closed"   
+      end)
+      case closed_at_record do
+        %{"created"=> closed_at_str} ->
+          {:ok, created_at, _} = DateTime.from_iso8601(issue["fields"]["created"])
+          {:ok, closed_at, _} = DateTime.from_iso8601(closed_at_str)
+          time_to_close = DateTime.diff(closed_at, created_at, :day)
+          [time_to_close | acc ]
+          _ -> acc
+      end
+    end)
+  |> Enum.frequencies()
+
+{min_livespan, max_livespan} = Map.keys(frequencies) |> Enum.min_max()
+x_data = min_livespan..max_livespan
+
+y_data =
+  Enum.reduce(x_data, [], fn livespan, acc ->
+    [Map.get(frequencies, livespan, 0) | acc]
+  end)
+  |> Enum.reverse()
+
+first_chart_data = %{
+  x_data: x_data,
+  y_data: y_data
+}
+```
+
+```elixir
+clip_after = 100
+
+Vl.new(width: 700, height: 500, title: "Распределение времени жизни задач в открытом состоянии")
+|> Vl.data_from_values(first_chart_data, only: ["x_data", "y_data"])
+|> Vl.mark(:bar)
+# |> Vl.transform(filter: "datum.x_data <= #{clip_after}")
+# |> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время", scale: [domain_min: 0, domain_max: clip_after, zero: true])
+|> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время в открытом состоянии (дни)", scale: [type: :pow, exponent: 0.5, domain_min: 0, zero: true])
+|> Vl.encode_field(:y, "y_data", type: :quantitative, title: "Частота встречаемости")
+
+```
+
+## 2. Распределение времени жизни задач в определённом статусе
+
+построить диаграммы, которые показывают распределение времени по состояниям задачи. По оси абсцисс – расположить время. По оси ординат – расположить суммарное количество задач, которое было в открытом виде соответствующее время. В расчет брать только закрытые задачи по проекту.
+Для каждого состояния должна строиться своя диаграмма
+
+```elixir
+issues_with_history = JiraFetcher.fetch_all_closed_issues_with_history(jira_url, headers, kafka)
+```
+
+```elixir
+defmodule IssueParser do
+  def get_datetime!(issue, field_type) do
+    {:ok, datetime, _} = DateTime.from_iso8601(issue["fields"][field_type])
+    datetime
+  end
+end
+
+defmodule StatusTimeCalculator do
+  def total_time_in_status(data, "Open") do
+    opened_at = data["created"]
+    changed_from_open =
+      data["changes"]
+      |> Enum.find(fn entry ->
+        entry["fromString"] == "Open"   
+      end)
+      |> get_in(["created"])
+    
+    DateTime.diff(changed_from_open, opened_at, :second)
+  end
+  
+  def total_time_in_status(data, target_status) do
+    # Извлекаем массив переходов из ключа "changes"
+    transitions = Map.get(data, "changes", [])
+    
+    transitions
+    |> Enum.sort_by(& &1["created"], DateTime)
+    |> find_time_spans(target_status)
+    |> Enum.reduce(0, fn {start_time, end_time}, acc ->
+      DateTime.diff(end_time, start_time, :second) + acc
+    end)
+  end
+
+  defp find_time_spans(sorted_transitions, target_status) do
+    {_, spans} = 
+      Enum.reduce(sorted_transitions, {nil, []}, fn 
+        transition, {current_status, acc} ->
+          # Если входим в целевой статус
+          if transition["toString"] == target_status do
+            {target_status, [{transition["created"], nil} | acc]}
+          
+          # Если выходим из целевого статуса
+          else if transition["fromString"] == target_status do
+            # Обновляем последний промежуток с конечным временем
+            updated_acc = update_last_span(acc, transition["created"])
+            {nil, updated_acc}
+          
+          else
+            {current_status, acc}
+          end
+        end
+      end)
+    
+    # Фильтруем только завершенные промежутки
+    Enum.filter(spans, fn
+      {_start, nil} -> false
+      {_, _} -> true
+    end)
+  end
+
+  defp update_last_span([], _end_time), do: []
+  defp update_last_span([{start, nil} | rest], end_time) do
+    [{start, end_time} | rest]
+  end
+  defp update_last_span([span | rest], end_time) do
+    [span | update_last_span(rest, end_time)]
+  end
+end
+```
+
+```elixir
+IO.puts(Enum.count(issues_with_history))
+
+# Проверка на то, что во всех подтянутых задачах подтянулась вся история изменений.
+# Ответ: Да, во всех закрытых подтягивается полностью
+# Enum.each(issues_with_history, fn issue ->
+#   total = issue["changelog"]["total"]
+#   loaded_total = issue["changelog"]["histories"] |> Enum.count()
+#   if total != loaded_total do
+#     false
+#   end
+# end)
+
+defmodule ViewStatusTimeDistribution do
+  def has_status(issue, status) do
+    with %{"changelog" => %{"histories" => histories}} <- issue do
+      Enum.any?(histories, fn history ->
+        items = history["items"]
+        Enum.any?(items, fn item ->
+          if item["field"] == "status" do
+            item["toString"] == status
+          else
+            false
+          end
+        end)
+      end)
+    else
+      _ -> false
+    end
+  end
+
+  def get_status_time_distribution(issues_with_history, status) do
+    issues_with_desired_status =
+      Enum.filter(issues_with_history, fn issue -> has_status(issue, status) end)
+    
+    frequencies =
+      issues_with_desired_status
+      |> Enum.reduce([], fn issue, acc ->
+        status_changes =
+          issue["changelog"]["histories"]
+          |> Enum.filter(fn history ->
+            Enum.any?(history["items"], fn item ->
+              if item["field"] == "status" do
+                true
+              else
+                false
+              end
+            end)
+          end)
+          |> Enum.flat_map(fn entry ->
+            entry["items"]
+            |> Enum.filter(fn item ->
+              item["fromString"] && item["toString"] && item["field"] == "status"
+            end)
+            |> Enum.map(fn item ->
+              %{
+                "created" => entry["created"],
+                "fromString" => item["fromString"],
+                "toString" => item["toString"]
+              }
+            end)
+          end)
+          |> Enum.map(fn change ->
+            {:ok, from, _} = DateTime.from_iso8601(change["created"])
+            %{change | "created" => from}
+          end)
+        
+        issue_history = %{
+          "created" => IssueParser.get_datetime!(issue, "created"),
+          "changes" => status_changes
+        }
+        seconds_in_status = StatusTimeCalculator.total_time_in_status(issue_history, status)
+        [trunc(seconds_in_status / 86400) | acc]
+      end)
+      |> Enum.frequencies()
+    
+    {min_livespan, max_livespan} = Map.keys(frequencies) |> Enum.min_max()
+    x_data = min_livespan..max_livespan
+    
+    y_data =
+      Enum.reduce(x_data, [], fn livespan, acc ->
+        [Map.get(frequencies, livespan, 0) | acc]
+      end)
+      |> Enum.reverse()
+    
+    second_chart_data = %{
+      x_data: x_data,
+      y_data: y_data
+    }
+    view(second_chart_data, status)
+  end
+  
+  def view(chart_data, status) do
+    clip_after = 100
+
+    Vl.new(width: 700, height: 500, title: "Распределение #{status}")
+    |> Vl.data_from_values(chart_data, only: ["x_data", "y_data"])
+    |> Vl.mark(:bar)
+    # |> Vl.transform(filter: "datum.x_data <= #{clip_after}")
+    # |> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время в состоянии (дни)", scale: [domain_min: 0, domain_max: clip_after, zero: true])
+      |> Vl.encode_field(:x, "x_data", type: :quantitative, title: "Время в состоянии (дни)", scale: [type: :pow, exponent: 0.3, domain_min: 0, zero: true])
+    |> Vl.encode_field(:y, "y_data", type: :quantitative, title: "Частота встречаемости")
+
+  end
+end
+```
+
+```elixir
+statuses = [
+  "Open",
+  "In Progress",
+  "Reopened",
+  "Resolved",
+  "Closed",
+  "Patch Available"
+]
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Open")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "In Progress")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Reopened")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Resolved")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Closed")
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Patch Available")
+```
