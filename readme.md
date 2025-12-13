@@ -22,5 +22,6 @@ mix escript.install hex livebook
 livebook server
 ```
 
-После этого в интерфейсе можно перейти к нужному проекту
+После этого в интерфейсе можно перейти к нужному проекту (Открыть `.livemd` файл)
+![alt text](image.png)
 
