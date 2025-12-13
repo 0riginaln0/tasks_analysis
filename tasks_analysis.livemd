@@ -1,3 +1,5 @@
+<!-- livebook:{"app_settings":{"access_type":"public","output_type":"rich","slug":"jira-analyzer"}} -->
+
 # Tasks analysis
 
 ```elixir
@@ -7,7 +9,6 @@ Mix.install([
   {:kino, "~> 0.18.0"},
   {:vega_lite, "~> 0.1.11"},
   {:kino_vega_lite, "~> 0.1.13"},
-  {:jason, "~> 1.4"},
 ])
 ```
 
