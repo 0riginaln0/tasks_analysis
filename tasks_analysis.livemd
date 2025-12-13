@@ -163,6 +163,27 @@ defmodule JiraFetcher do
     )
     |> Enum.to_list()
   end
+
+  def fetch_all_issues_with_priorities(base_url, headers, project_key) do
+    jql = "project = #{project_key}"
+
+    Stream.resource(
+      fn -> 0 end,
+      fn start_at ->
+        case fetch_page(base_url, headers, jql, start_at, "priority") do
+          {:ok, %{"issues" => issues, "total" => total}} ->
+            if issues == [] or start_at >= total do
+              {:halt, start_at}
+            else
+              {issues, start_at + length(issues)}
+            end
+          _ -> {:halt, start_at}
+        end
+      end,
+      fn _ -> :ok end
+    )
+    |> Enum.to_list()
+  end
 end
 
 ```
@@ -854,4 +875,98 @@ Vl.new(width: 250, title: "Время работы пользователей н
 |> Vl.mark(:bar)
 |> Vl.encode_field(:x, "hours", type: :quantitative)
 |> Vl.encode_field(:y, "issues", type: :quantitative)
+```
+
+## 6. Задачи по приоритетам
+
+построить график, выражающий количество задач по степени серьезности
+
+```elixir
+ran = Enum.random(all_issues)
+
+ran["fields"] |> Map.keys()
+
+all_issues_with_priority_cache_path = Path.join(File.cwd!(), "all_issues_with_priority.json") 
+
+all_issues_with_priority =
+  if File.exists?(all_issues_with_priority_cache_path) do
+    all_issues_with_priority_cache_path |> File.read!() |> JSON.decode!()
+  else
+    result = JiraFetcher.fetch_all_issues_with_priorities(jira_url, headers, kafka)
+    File.write!(all_issues_with_priority_cache_path, JSON.encode!(result))
+    result
+  end
+
+```
+
+```elixir
+IO.puts("Загружено задач с информацией о приоритете: #{Enum.count(all_issues_with_priority)}")
+```
+
+```elixir
+Enum.random(all_issues_with_priority)
+```
+
+```elixir
+defmodule PriorityAnalyzer do
+  def calculate_priority_distribution(issues) do
+    # Собираем статистику по приоритетам
+    Enum.reduce(issues, %{}, fn issue, acc ->
+      priority_data = issue["fields"]["priority"]
+      
+      if priority_data do
+        priority_name = priority_data["name"] || "Unknown"
+        priority_id = priority_data["id"] || "unknown"
+        
+        # Используем id как ключ для группировки, но отображаем name
+        current = Map.get(acc, priority_id, %{
+          id: priority_id,
+          name: priority_name,
+          count: 0
+        })
+        
+        updated = %{current | count: current.count + 1}
+        Map.put(acc, priority_id, updated)
+      else
+        # Задачи без приоритета
+        current = Map.get(acc, "no_priority", %{
+          id: "no_priority",
+          name: "No Priority",
+          count: 0
+        })
+        
+        updated = %{current | count: current.count + 1}
+        Map.put(acc, "no_priority", updated)
+      end
+    end)
+  end
+  
+  def get_sorted_priorities(priority_stats) do
+    # Сортируем по количеству задач (по убыванию)
+    priority_stats
+    |> Map.values()
+    |> Enum.sort_by(& &1.count, :desc)
+  end
+  
+  def create_chart_data(priority_stats) do
+    get_sorted_priorities(priority_stats)
+  end
+end
+```
+
+```elixir
+sixth_chart_data =
+  all_issues_with_priority
+  |> PriorityAnalyzer.calculate_priority_distribution
+  |> PriorityAnalyzer.create_chart_data
+```
+
+```elixir
+Vl.new(width: 500, title: "Задачи по приоритетам")
+|> Vl.data_from_values(sixth_chart_data, only: ["name", "count", "id"])
+|> Vl.mark(:bar)
+|> Vl.encode_field(:x, "name", type: :nominal,
+                   sort: [field: "id", order: "descending"], title: "Приоритет",
+                  axis: [label_angle: 0])
+|> Vl.encode_field(:y, "count", type: :quantitative, title: "Количество")
 ```
