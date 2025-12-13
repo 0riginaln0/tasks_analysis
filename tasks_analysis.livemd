@@ -141,6 +141,28 @@ defmodule JiraFetcher do
     )
     |> Enum.to_list()
   end
+
+  def fetch_all_closed_issues_with_worklogs(base_url, headers, project_key) do
+    jql = "project = #{project_key} AND statusCategory = Done"
+
+    Stream.resource(
+      fn -> 0 end,
+      fn start_at ->
+        # Запрашиваем worklog для каждой задачи
+        case fetch_page(base_url, headers, jql, start_at, "worklog") do
+          {:ok, %{"issues" => issues, "total" => total}} ->
+            if issues == [] or start_at >= total do
+              {:halt, start_at}
+            else
+              {issues, start_at + length(issues)}
+            end
+          _ -> {:halt, start_at}
+        end
+      end,
+      fn _ -> :ok end
+    )
+    |> Enum.to_list()
+  end
 end
 
 ```
@@ -723,7 +745,7 @@ Vl.new(width: 500)
                    sort: [field: "total", order: "descending"])
 ```
 
-## 5. Время работы пользователя на задачах
+## 5. Время работы пользователей над задачами
 
 построить гистограмму, отражающую время, которое затратил
 пользователь на ее выполнение на основе залогированного времени. По оси
@@ -732,60 +754,25 @@ Vl.new(width: 500)
 закрытые задачи по проекту
 
 ```elixir
-# 5. Гистограмма времени выполнения задач пользователем на основе залогированного времени
+issues_with_worklogs_cache_path = Path.join(File.cwd!(), "issues_with_worklogs.json") 
 
-defmodule WorklogFetcher do
-  def fetch_all_closed_issues_with_worklogs(base_url, headers, project_key) do
-    jql = "project = #{project_key} AND statusCategory = Done"
-
-    Stream.resource(
-      fn -> 0 end,
-      fn start_at ->
-        # Запрашиваем worklog для каждой задачи
-        case fetch_page(base_url, headers, jql, start_at, "worklog", "") do
-          {:ok, %{"issues" => issues, "total" => total}} ->
-            if issues == [] or start_at >= total do
-              {:halt, start_at}
-            else
-              {issues, start_at + length(issues)}
-            end
-          _ -> {:halt, start_at}
-        end
-      end,
-      fn _ -> :ok end
-    )
-    |> Enum.to_list()
+issues_with_worklogs =
+  if File.exists?(issues_with_worklogs_cache_path) do
+    issues_with_worklogs_cache_path |> File.read!() |> JSON.decode!()
+  else
+    result = JiraFetcher.fetch_all_closed_issues_with_worklogs(jira_url, headers, kafka)
+    File.write!(issues_with_worklogs_cache_path, JSON.encode!(result))
+    result
   end
-
-  defp fetch_page(base_url, headers, jql, start_at, fields, expand) do
-    url = "#{base_url}/search"
-    params = [
-      jql: jql,
-      startAt: start_at,
-      maxResults: 100,
-      fields: fields,
-      expand: expand
-    ]
-    
-    case Req.get(url, headers: headers, params: params) do
-      {:ok, %{status: 200, body: body}} -> {:ok, body}
-      {:ok, response} ->
-        IO.inspect(response, label: "Ошибка запроса")
-        {:error, response}
-    end
-  end
-end
-```
-
-```elixir
-IO.puts("Загружаем закрытые задачи с worklog...")
-issues_with_worklogs = WorklogFetcher.fetch_all_closed_issues_with_worklogs(jira_url, headers, kafka)
-
 IO.puts("Загружено задач: #{Enum.count(issues_with_worklogs)}")
 ```
 
 ```elixir
 Enum.random(issues_with_worklogs)
+issues_with_non_empty_worklogs = Enum.filter(issues_with_worklogs, fn issue ->
+  Enum.count(issue["fields"]["worklog"]["worklogs"]) > 0
+end)
+IO.puts("#{Enum.count(issues_with_non_empty_worklogs)} issues with worklogs")
 ```
 
 ```elixir
@@ -793,35 +780,34 @@ Enum.random(issues_with_worklogs)
 defmodule WorklogAnalyzer do
   def calculate_user_time_per_issue(issues) do
     Enum.flat_map(issues, fn issue ->
-      case issue["fields"]["worklog"] do
-        %{"worklogs" => worklogs} when is_list(worklogs) ->
-          # Группируем время по пользователям для этой задачи
-          user_time = 
-            worklogs
-            |> Enum.group_by(fn worklog -> 
-                worklog["author"]["displayName"] || worklog["author"]["name"]
-              end)
-            |> Enum.map(fn {user, logs} ->
-                total_seconds = Enum.reduce(logs, 0, fn log, acc ->
-                  acc + (log["timeSpentSeconds"] || 0)
-                end)
-                %{
-                  issue_key: issue["key"],
-                  user: user,
-                  total_seconds: total_seconds,
-                  total_hours: total_seconds / 3600,
-                  worklogs_count: length(logs)
-                }
-              end)
-          
-          # Если в задаче есть worklog, возвращаем данные
-          if user_time != [] do
-            user_time
-          else
-            []
-          end
-        _ ->
-          []
+      %{"worklogs" => worklogs} = issue["fields"]["worklog"]
+
+      # Группируем время по пользователям для этой задачи
+      user_time =
+        worklogs
+        |> Enum.group_by(fn worklog ->
+          worklog["author"]["displayName"] || worklog["author"]["name"]
+        end)
+        |> Enum.map(fn {user, logs} ->
+          total_seconds =
+            Enum.reduce(logs, 0, fn log, acc ->
+              acc + (log["timeSpentSeconds"] || 0)
+            end)
+
+          %{
+            issue_key: issue["key"],
+            user: user,
+            total_seconds: total_seconds,
+            total_hours: total_seconds / 3600,
+            worklogs_count: length(logs)
+          }
+        end)
+
+      # Если в задаче есть worklog, возвращаем данные
+      if user_time != [] do
+        user_time
+      else
+        []
       end
     end)
   end
@@ -834,7 +820,7 @@ defmodule WorklogAnalyzer do
 end
 
 # Получаем данные о времени пользователей
-worklog_data = WorklogAnalyzer.calculate_user_time_per_issue(issues_with_worklogs)
+worklog_data = WorklogAnalyzer.calculate_user_time_per_issue(issues_with_non_empty_worklogs)
 
 IO.puts("Найдено записей worklog: #{Enum.count(worklog_data)}")
 
@@ -843,4 +829,29 @@ filtered_worklog_data = WorklogAnalyzer.filter_by_min_time(worklog_data, 300)
 
 IO.puts("После фильтрации (≥5 минут): #{Enum.count(filtered_worklog_data)}")
 
+filtered_worklog_data
+
+```
+
+```elixir
+issues_per_total_hours =
+  filtered_worklog_data
+  |> Enum.reduce([], fn issue, acc ->
+    [issue.total_hours | acc ]
+  end)
+  |> Enum.frequencies()
+
+
+data_list = Enum.map(issues_per_total_hours, fn {key, value} -> %{hours: key, issues: value} end)
+
+```
+
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6ItCS0YDQtdC80Y8g0YDQsNCx0L7RgtGLINC/0L7Qu9GM0LfQvtCy0LDRgtC10LvQtdC5INC90LDQtCDQt9Cw0LTQsNGH0LDQvNC4IiwiaGVpZ2h0IjpudWxsLCJsYXllcnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6ImJhciIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoiZGF0YV9saXN0IiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoiaG91cnMiLCJ4X2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwieF9maWVsZF9iaW4iOm51bGwsInhfZmllbGRfc2NhbGVfdHlwZSI6bnVsbCwieF9maWVsZF90eXBlIjoicXVhbnRpdGF0aXZlIiwieV9maWVsZCI6Imlzc3VlcyIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifV0sInZsX2FsaWFzIjoiRWxpeGlyLlZsIiwid2lkdGgiOjI1MH0","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+
+```elixir
+Vl.new(width: 250, title: "Время работы пользователей над задачами")
+|> Vl.data_from_values(data_list, only: ["hours", "issues"])
+|> Vl.mark(:bar)
+|> Vl.encode_field(:x, "hours", type: :quantitative)
+|> Vl.encode_field(:y, "issues", type: :quantitative)
 ```
