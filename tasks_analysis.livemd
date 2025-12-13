@@ -35,25 +35,6 @@ IO.puts "Hello, World"
 st
 ```
 
-<!-- livebook:{"attrs":"eyJxdWVyaWVzIjpbeyJhdXRoIjp7InNjaGVtZSI6Im5vbmUiLCJ0eXBlIjowLCJ2YWx1ZSI6IiJ9LCJib2R5Ijp7ImNvbnRlbnRUeXBlIjoibm9uZSIsImZvcm0iOltdLCJyYXciOiIifSwiaGVhZGVycyI6W10sIm9wdGlvbnMiOnsiY29udGVudFR5cGUiOiJlbGl4aXIiLCJyYXciOiIifSwicGFyYW1zIjpbXSwicGx1Z2lucyI6W3siYWN0aXZlIjpmYWxzZSwiZGVzY3JpcHRpb24iOiJBIGNvbGxlY3Rpb24gb2Ygc3RlcHMsIHVzYWJsZSB3aXRoIFJlcS4iLCJuYW1lIjoiQ3VybFJlcS5QbHVnaW4iLCJ2ZXJzaW9uIjpudWxsfV0sInJlcXVlc3RfdHlwZSI6ImdldCIsInN0ZXBzIjp7ImVycm9yX3N0ZXBzIjpbeyJhY3RpdmUiOnRydWUsImRvYyI6IlJldHJpZXMgYSByZXF1ZXN0IGluIGZhY2Ugb2YgZXJyb3JzLiIsIm5hbWUiOiJyZXRyeSJ9XSwicmVxdWVzdF9zdGVwcyI6W3siYWN0aXZlIjp0cnVlLCJkb2MiOiJTZXRzIHRoZSB1c2VyLWFnZW50IGhlYWRlci4iLCJuYW1lIjoicHV0X3VzZXJfYWdlbnQifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiQXNrcyB0aGUgc2VydmVyIHRvIHJldHVybiBjb21wcmVzc2VkIHJlc3BvbnNlLiIsIm5hbWUiOiJjb21wcmVzc2VkIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IkVuY29kZXMgdGhlIHJlcXVlc3QgYm9keS4iLCJuYW1lIjoiZW5jb2RlX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyBiYXNlIFVSTCBmb3IgYWxsIHJlcXVlc3RzLiIsIm5hbWUiOiJwdXRfYmFzZV91cmwifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyByZXF1ZXN0IGF1dGhlbnRpY2F0aW9uLiIsIm5hbWUiOiJhdXRoIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IkFkZHMgcGFyYW1zIHRvIHJlcXVlc3QgcXVlcnkgc3RyaW5nLiIsIm5hbWUiOiJwdXRfcGFyYW1zIn0seyJhY3RpdmUiOnRydWUsImRvYyI6IlVzZXMgYSB0ZW1wbGF0ZWQgcmVxdWVzdCBwYXRoLiIsIm5hbWUiOiJwdXRfcGF0aF9wYXJhbXMifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyB0aGUgXCJSYW5nZVwiIHJlcXVlc3QgaGVhZGVyLiIsIm5hbWUiOiJwdXRfcmFuZ2UifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiUGVyZm9ybXMgSFRUUCBjYWNoaW5nIHVzaW5nIGBpZi1tb2RpZmllZC1zaW5jZWAgaGVhZGVyLiIsIm5hbWUiOiJjYWNoZSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJTZXRzIGFkYXB0ZXIgdG8gYHJ1bl9wbHVnLzFgLiIsIm5hbWUiOiJwdXRfcGx1ZyJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJDb21wcmVzc2VzIHRoZSByZXF1ZXN0IGJvZHkuIiwibmFtZSI6ImNvbXByZXNzX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiU2V0cyBleHBlY3RlZCByZXNwb25zZSBib2R5IGNoZWNrc3VtLiIsIm5hbWUiOiJjaGVja3N1bSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJTaWducyByZXF1ZXN0IHdpdGggQVdTIFNpZ25hdHVyZSBWZXJzaW9uIDQuIiwibmFtZSI6InB1dF9hd3Nfc2lndjQifV0sInJlc3BvbnNlX3N0ZXBzIjpbeyJhY3RpdmUiOnRydWUsImRvYyI6IlJldHJpZXMgYSByZXF1ZXN0IGluIGZhY2Ugb2YgZXJyb3JzLiIsIm5hbWUiOiJyZXRyeSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJIYW5kbGVzIEhUVFAgNHh4LzV4eCBlcnJvciByZXNwb25zZXMuIiwibmFtZSI6ImhhbmRsZV9odHRwX2Vycm9ycyJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJGb2xsb3dzIHJlZGlyZWN0cy4iLCJuYW1lIjoicmVkaXJlY3QifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjpudWxsLCJuYW1lIjoiaHR0cF9kaWdlc3QifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiRGVjb21wcmVzc2VzIHRoZSByZXNwb25zZSBib2R5IGJhc2VkIG9uIHRoZSBgY29udGVudC1lbmNvZGluZ2AgaGVhZGVyLiIsIm5hbWUiOiJkZWNvbXByZXNzX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjoiVmVyaWZpZXMgdGhlIHJlc3BvbnNlIGJvZHkgY2hlY2tzdW0uIiwibmFtZSI6InZlcmlmeV9jaGVja3N1bSJ9LHsiYWN0aXZlIjp0cnVlLCJkb2MiOiJEZWNvZGVzIHJlc3BvbnNlIGJvZHkgYmFzZWQgb24gdGhlIGRldGVjdGVkIGZvcm1hdC4iLCJuYW1lIjoiZGVjb2RlX2JvZHkifSx7ImFjdGl2ZSI6dHJ1ZSwiZG9jIjpudWxsLCJuYW1lIjoib3V0cHV0In1dfSwidXJsIjoiaHR0cHM6Ly9hcGkuZ2l0aHViLmNvbS9yZXBvcy9lbGl4aXItbGFuZy9lbGl4aXIiLCJ2YXJpYWJsZSI6InJlc3AiLCJ2ZXJicyI6WyJnZXQiLCJwb3N0IiwicHV0IiwicGF0Y2giLCJkZWxldGUiLCJoZWFkIiwib3B0aW9ucyJdfV0sInF1ZXJ5SW5kZXgiOjB9","chunks":null,"kind":"Elixir.Merquery.SmartCell","livebook_object":"smart_cell"} -->
-
-```elixir
-req =
-  Req.new(
-    method: :get,
-    url: "https://api.github.com/repos/elixir-lang/elixir",
-    headers: %{},
-    params: %{}
-  )
-{req, resp} = Req.request(req)
-resp
-```
-
-```elixir
-resp.headers
-
-```
-
 ## 0. Общие для всех запросов параметры
 
 ```elixir
@@ -125,6 +106,28 @@ defmodule JiraFetcher do
       fn -> 0 end,
       fn start_at ->
         case fetch_page(base_url, headers, jql, start_at, "created,status,updated,resolutiondate", "changelog") do
+          {:ok, %{"issues" => issues, "total" => total}} ->
+            if issues == [] or start_at >= total do
+              {:halt, start_at}
+            else
+              {issues, start_at + length(issues)}
+            end
+          _ -> {:halt, start_at}
+        end
+      end,
+      fn _ -> :ok end
+    )
+    |> Enum.to_list()
+  end
+
+  def fetch_all_issues_with_users(base_url, headers, project_key) do
+    jql = "project = #{project_key}"
+    
+    Stream.resource(
+      fn -> 0 end,
+      fn start_at ->
+        # Запрашиваем поля assignee (исполнитель) и reporter (репортер)
+        case fetch_page(base_url, headers, jql, start_at, "assignee,reporter") do
           {:ok, %{"issues" => issues, "total" => total}} ->
             if issues == [] or start_at >= total do
               {:halt, start_at}
@@ -539,7 +542,7 @@ defmodule DailyTaskStats do
     daily_series = 
       Enum.flat_map(daily_data, fn day ->
         [
-          %{date: day.date, value: day.created_daily, type: "Заведено"},
+          %{date: day.date, value: day.created_daily, type: "Создано"},
           %{date: day.date, value: day.closed_daily, type: "Закрыто"}
         ]
       end)
@@ -547,7 +550,7 @@ defmodule DailyTaskStats do
     cumulative_series = 
       Enum.flat_map(daily_data, fn day ->
         [
-          %{date: day.date, value: day.created_cumulative, type: "Заведено"},
+          %{date: day.date, value: day.created_cumulative, type: "Создано"},
           %{date: day.date, value: day.closed_cumulative, type: "Закрыто"}
         ]
       end)
@@ -607,5 +610,135 @@ Vl.new(width: 600, height: 300, title: ["Количество открытых �
 построить график, выражающий общее количество задач для пользователей, в которых он указан как исполнитель и репортер. По оси абсцисс – расположить количество задач. По оси ординат – расположить имя пользователя. Отразить график для 30 топовых пользователей с максимальным количеством задач;
 
 ```elixir
-IO.puts "Build the chart mentioned above"
+all_issues_with_users = JiraFetcher.fetch_all_issues_with_users(jira_url, headers, kafka)
 ```
+
+```elixir
+defmodule UserTaskStats do
+  def calculate_user_stats(issues) do
+    # Собираем статистику по пользователям
+    Enum.reduce(issues, %{}, fn issue, acc ->
+      # Обрабатываем assignee (исполнитель)
+      assignee_key = get_user_key(issue["fields"]["assignee"])
+      reporter_key = get_user_key(issue["fields"]["reporter"])
+
+      if assignee_key == reporter_key do
+        update_user_stats(acc, assignee_key, :both_count)
+      else
+        acc =
+          if assignee_key do
+            update_user_stats(acc, assignee_key, :assignee_count)
+          else
+            acc
+          end
+
+        if reporter_key do
+          update_user_stats(acc, reporter_key, :reporter_count)
+        else
+          acc
+        end
+      end
+    end)
+  end
+
+  defp get_user_key(user_data) do
+    case user_data do
+      %{"key" => key, "displayName" => name} -> 
+        {key, name}
+      %{"key" => key} -> 
+        {key, key}
+      %{"displayName" => name} -> 
+        {name, name}
+      _ ->
+        nil
+    end
+  end
+
+  defp update_user_stats(acc, {user_key, user_name}, type) do
+    current =
+      Map.get(acc, user_key, %{name: user_name, assignee_count: 0, reporter_count: 0, total: 0})
+
+    updated =
+      case type do
+        :assignee_count ->
+          %{current | assignee_count: current.assignee_count + 1}
+
+        :reporter_count ->
+          %{current | reporter_count: current.reporter_count + 1}
+
+        :both_count ->
+          %{
+            current
+            | assignee_count: current.assignee_count + 1,
+              reporter_count: current.reporter_count + 1
+          }
+      end
+
+    new_total =
+      case type do
+        :both_count -> updated.assignee_count + updated.reporter_count - 1
+        _ -> updated.assignee_count + updated.reporter_count
+      end
+
+    updated = %{updated | total: new_total}
+
+    Map.put(acc, user_key, updated)
+  end
+
+  def get_top_users(user_stats, limit \\ 30) do
+    user_stats
+    |> Map.values()
+    |> Enum.sort_by(& &1.total, :desc)
+    |> Enum.take(limit)
+  end
+end
+
+```
+
+```elixir
+Enum.random(all_issues_with_users)
+Enum.count all_issues_with_users
+valid_all_issues_with_users = Enum.filter(all_issues_with_users, fn issue ->
+  reporter = issue["fields"]["reporter"]
+  assignee = issue["fields"]["assignee"]
+  reporter || assignee
+end)
+user_stats = UserTaskStats.calculate_user_stats(valid_all_issues_with_users)
+top_users = UserTaskStats.get_top_users(user_stats)
+
+top_users
+
+```
+
+```elixir
+Vl.new()
+|> Vl.data_from_values(top_users, only: ["total", "name"])
+|> Vl.mark(:bar)
+|> Vl.encode_field(:color, "total", type: :quantitative)
+|> Vl.encode_field(:x, "total", type: :quantitative)
+|> Vl.encode_field(:y, "name", type: :nominal, 
+                   sort: [field: "total", order: "descending"])
+```
+
+```elixir
+top_users
+```
+
+```elixir
+
+Vl.new()
+|> Vl.data_from_values(top_users)
+|> Vl.mark(:bar)
+|> Vl.encode_field(:color, "total", type: :quantitative)
+|> Vl.encode_field(:x, "total", type: :quantitative)
+|> Vl.encode_field(:y, "name", type: :nominal, 
+                   sort: [field: "total", order: "descending"])
+```
+
+## 5.
+
+построить гистограмму, отражающую время, которое затратил
+пользователь на ее выполнение на основе залогированного времени. По оси
+абсцисс – расположить время. По оси ординат – расположить суммарное
+количество задач, которое соответствует этому времени. В расчет брать только
+закрытые задачи по проекту
