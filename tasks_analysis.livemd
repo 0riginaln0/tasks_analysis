@@ -288,7 +288,7 @@ defmodule StatusTimeCalculator do
     end)
   end
 
-  defp find_time_spans(sorted_transitions, target_status) do
+  def find_time_spans(sorted_transitions, target_status) do
     {_, spans} = 
       Enum.reduce(sorted_transitions, {nil, []}, fn 
         transition, {current_status, acc} ->
@@ -969,4 +969,191 @@ Vl.new(width: 500, title: "Задачи по приоритетам")
                    sort: [field: "id", order: "descending"], title: "Приоритет",
                   axis: [label_angle: 0])
 |> Vl.encode_field(:y, "count", type: :quantitative, title: "Количество")
+```
+
+## Testing
+
+```elixir
+ExUnit.start(autorun: false)
+
+defmodule JiraAnalyticsTest do
+  use ExUnit.Case, async: true
+  require IssueParser
+  require DateRangeFilter
+  require StatusTimeCalculator
+  require WorklogAnalyzer
+  
+  describe "IssueParser" do
+    test "get_datetime!/1 parses ISO8601 correctly" do
+      issue = %{
+        "fields" => %{
+          "created" => "2023-01-01T10:00:00.000+0000"
+        }
+      }
+
+      datetime = IssueParser.get_datetime!(issue, "created")
+
+      assert %DateTime{
+        year: 2023,
+        month: 1,
+        day: 1,
+        hour: 10,
+        minute: 0,
+        second: 0
+      } = datetime
+    end
+  end
+
+  describe "DateRangeFilter" do
+    test "filter_by_date_range/3 filters data correctly" do
+      data = [
+        %{date: "2023-01-01", value: 1},
+        %{date: "2023-01-15", value: 2},
+        %{date: "2023-02-01", value: 3}
+      ]
+
+      result = DateRangeFilter.filter_by_date_range(data, "2023-01-01", "2023-01-31")
+
+      assert length(result) == 2
+      assert Enum.all?(result, fn %{date: date} -> 
+        date >= "2023-01-01" and date <= "2023-01-31"
+      end)
+    end
+
+    test "filter_two_arrays/4 filters both arrays" do
+      array1 = [
+        %{date: "2023-01-01", value: 1},
+        %{date: "2023-02-01", value: 2}
+      ]
+      
+      array2 = [
+        %{date: "2023-01-01", value: 3},
+        %{date: "2023-02-01", value: 4}
+      ]
+
+      {filtered1, filtered2} = DateRangeFilter.filter_two_arrays(
+        array1, array2, "2023-01-01", "2023-01-31"
+      )
+
+      assert length(filtered1) == 1
+      assert length(filtered2) == 1
+      assert Enum.at(filtered1, 0).date == "2023-01-01"
+      assert Enum.at(filtered2, 0).date == "2023-01-01"
+    end
+  end
+
+
+  describe "StatusTimeCalculator" do
+    test "total_time_in_status/2 calculates time for Open status" do
+      data = %{
+        "created" => ~U[2023-01-01 00:00:00Z],
+        "changes" => [
+          %{"created" => ~U[2023-01-01 02:00:00Z], "fromString" => "Open", "toString" => "In Progress"}
+        ]
+      }
+
+      result = StatusTimeCalculator.total_time_in_status(data, "Open")
+      
+      assert result == 7200 # 2 hours in seconds
+    end
+
+    test "total_time_in_status/2 calculates time for other statuses" do
+      data = %{
+        "created" => ~U[2023-01-01 00:00:00Z],
+        "changes" => [
+          %{"created" => ~U[2023-01-01 01:00:00Z], "fromString" => "Open", "toString" => "In Progress"},
+          %{"created" => ~U[2023-01-01 03:00:00Z], "fromString" => "In Progress", "toString" => "Resolved"},
+          %{"created" => ~U[2023-01-01 04:00:00Z], "fromString" => "Resolved", "toString" => "In Progress"},
+          %{"created" => ~U[2023-01-01 05:00:00Z], "fromString" => "In Progress", "toString" => "Closed"}
+        ]
+      }
+
+      result = StatusTimeCalculator.total_time_in_status(data, "In Progress")
+      
+      # First period: 01:00 to 03:00 = 2 hours
+      # Second period: 04:00 to 05:00 = 1 hour
+      # Total: 3 hours = 10800 seconds
+      assert result == 10800
+    end
+
+    test "find_time_spans/2 finds correct time spans" do
+      transitions = [
+        %{"created" => ~U[2023-01-01 01:00:00Z], "fromString" => "Open", "toString" => "In Progress"},
+        %{"created" => ~U[2023-01-01 03:00:00Z], "fromString" => "In Progress", "toString" => "Resolved"},
+        %{"created" => ~U[2023-01-01 04:00:00Z], "fromString" => "Resolved", "toString" => "In Progress"},
+        %{"created" => ~U[2023-01-01 05:00:00Z], "fromString" => "In Progress", "toString" => "Closed"}
+      ]
+
+      result = StatusTimeCalculator.find_time_spans(transitions, "In Progress")
+      
+      assert result == [
+        {~U[2023-01-01 04:00:00Z], ~U[2023-01-01 05:00:00Z]},
+        {~U[2023-01-01 01:00:00Z], ~U[2023-01-01 03:00:00Z]}
+      ]
+    end
+  end
+
+  describe "WorklogAnalyzer" do
+    test "calculate_user_time_per_issue/1 groups worklogs by user" do
+      issues = [
+        %{
+          "key" => "TEST-1",
+          "fields" => %{
+            "worklog" => %{
+              "worklogs" => [
+                %{
+                  "author" => %{"displayName" => "User1"},
+                  "timeSpentSeconds" => 3600
+                },
+                %{
+                  "author" => %{"displayName" => "User2"},
+                  "timeSpentSeconds" => 1800
+                },
+                %{
+                  "author" => %{"displayName" => "User1"},
+                  "timeSpentSeconds" => 1800
+                }
+              ]
+            }
+          }
+        }
+      ]
+
+      result = WorklogAnalyzer.calculate_user_time_per_issue(issues)
+
+      assert [
+        %{
+          issue_key: "TEST-1",
+          user: "User1",
+          total_seconds: 5400,
+          total_hours: 1.5,
+          worklogs_count: 2
+        },
+        %{
+          issue_key: "TEST-1",
+          user: "User2",
+          total_seconds: 1800,
+          total_hours: 0.5,
+          worklogs_count: 1
+        }
+      ] = result
+    end
+
+    test "filter_by_min_time/2 filters correctly" do
+      worklog_data = [
+        %{total_seconds: 300, total_hours: 0.083},
+        %{total_seconds: 299, total_hours: 0.083},
+        %{total_seconds: 600, total_hours: 0.167}
+      ]
+
+      result = WorklogAnalyzer.filter_by_min_time(worklog_data, 300)
+
+      assert length(result) == 2
+      refute Enum.any?(result, fn item -> item.total_seconds == 299 end)
+    end
+  end
+end
+
+
+ExUnit.run()
 ```
