@@ -79,7 +79,7 @@ defmodule JiraFetcher do
   end
 
   def fetch_all_closed_issues_with_history(base_url, headers, project_key) do
-    jql = "project = #{project_key} AND status = Closed"
+    jql = "project = #{project_key} AND statusCategory = Done"
 
     Stream.resource(
       fn -> 0 end,
@@ -146,12 +146,21 @@ end
 ```
 
 ```elixir
-all_closed_issues = JiraFetcher.fetch_all_closed_issues_with_history(jira_url, headers, kafka)
+all_closed_issues_cache_path = Path.join(File.cwd!(), "all_closed_issues.json") 
+
+all_closed_issues =
+  if File.exists?(all_closed_issues_cache_path) do
+    all_closed_issues_cache_path |> File.read!() |> JSON.decode!()
+  else
+    result = JiraFetcher.fetch_all_closed_issues_with_history(jira_url, headers, kafka)
+    File.write!(all_closed_issues_cache_path, JSON.encode!(result))
+    result
+  end
 ```
 
 ```elixir
 all_closed_issues
-|> length()
+|> length() |> IO.puts()
 
 issue = Enum.at(all_closed_issues, 10)
 
@@ -159,33 +168,11 @@ issue = Enum.at(all_closed_issues, 10)
 frequencies =
   all_closed_issues
   |> Enum.reduce([], fn issue, acc ->
-      closed_at_record = issue["changelog"]["histories"]
-      |> Enum.flat_map(fn entry ->
-        entry["items"]
-        |> Enum.filter(fn item ->
-          item["fromString"] && item["toString"] && item["field"] == "status"
-        end)
-        |> Enum.map(fn item ->
-            %{
-              "created" => entry["created"],
-              "fromString" => item["fromString"],
-              "toString" => item["toString"]
-            }
-        end)
-      end)
-      |> Enum.reverse()
-      |> Enum.find(fn entry ->
-        entry["toString"] == "Closed"   
-      end)
-      case closed_at_record do
-        %{"created"=> closed_at_str} ->
-          {:ok, created_at, _} = DateTime.from_iso8601(issue["fields"]["created"])
-          {:ok, closed_at, _} = DateTime.from_iso8601(closed_at_str)
-          time_to_close = DateTime.diff(closed_at, created_at, :day)
-          [time_to_close | acc ]
-          _ -> acc
-      end
-    end)
+    {:ok, created_at, _} = DateTime.from_iso8601(issue["fields"]["created"])
+    {:ok, closed_at, _} = DateTime.from_iso8601(issue["fields"]["resolutiondate"])
+    time_to_close = DateTime.diff(closed_at, created_at, :day)
+    [time_to_close | acc ]
+  end)
   |> Enum.frequencies()
 
 {min_livespan, max_livespan} = Map.keys(frequencies) |> Enum.min_max()
@@ -222,7 +209,7 @@ Vl.new(width: 700, height: 500, title: "Распределение времен�
 Для каждого состояния должна строиться своя диаграмма
 
 ```elixir
-issues_with_history = JiraFetcher.fetch_all_closed_issues_with_history(jira_url, headers, kafka)
+issues_with_history = all_closed_issues
 ```
 
 ```elixir
@@ -457,11 +444,20 @@ ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Pa
 **Клетка ниже будет загружать данные около 200 секунд, так что просто так её не запускайте**
 
 ```elixir
-all_issues = JiraFetcher.fetch_all_issues(jira_url, headers, kafka)
+all_issues_cache_path = Path.join(File.cwd!(), "all_issues.json") 
+
+all_issues =
+  if File.exists?(all_issues_cache_path) do
+    all_issues_cache_path |> File.read!() |> JSON.decode!()
+  else
+    result = JiraFetcher.fetch_all_issues(jira_url, headers, kafka)
+    File.write!(all_issues_cache_path, JSON.encode!(result))
+    result
+  end
 ```
 
 ```elixir
-Enum.count(all_issues) # 18723. Yes we got them all
+Enum.count(all_issues) |> IO.puts # 18723. Yes we got them all
 
 defmodule DailyTaskStats do
   def calculate_daily_stats(issues) do
@@ -610,7 +606,16 @@ Vl.new(width: 600, height: 300, title: ["Количество открытых �
 построить график, выражающий общее количество задач для пользователей, в которых он указан как исполнитель и репортер. По оси абсцисс – расположить количество задач. По оси ординат – расположить имя пользователя. Отразить график для 30 топовых пользователей с максимальным количеством задач;
 
 ```elixir
-all_issues_with_users = JiraFetcher.fetch_all_issues_with_users(jira_url, headers, kafka)
+all_issues_with_users_cache_path = Path.join(File.cwd!(), "all_issues_with_users.json") 
+
+all_issues_with_users =
+  if File.exists?(all_issues_with_users_cache_path) do
+    all_issues_with_users_cache_path |> File.read!() |> JSON.decode!()
+  else
+    result = JiraFetcher.fetch_all_issues_with_users(jira_url, headers, kafka)
+    File.write!(all_issues_with_users_cache_path, JSON.encode!(result))
+    result
+  end
 ```
 
 ```elixir
@@ -706,28 +711,11 @@ end)
 user_stats = UserTaskStats.calculate_user_stats(valid_all_issues_with_users)
 top_users = UserTaskStats.get_top_users(user_stats)
 
-top_users
-
 ```
 
 ```elixir
-Vl.new()
+Vl.new(width: 500)
 |> Vl.data_from_values(top_users, only: ["total", "name"])
-|> Vl.mark(:bar)
-|> Vl.encode_field(:color, "total", type: :quantitative)
-|> Vl.encode_field(:x, "total", type: :quantitative)
-|> Vl.encode_field(:y, "name", type: :nominal, 
-                   sort: [field: "total", order: "descending"])
-```
-
-```elixir
-top_users
-```
-
-```elixir
-
-Vl.new()
-|> Vl.data_from_values(top_users)
 |> Vl.mark(:bar)
 |> Vl.encode_field(:color, "total", type: :quantitative)
 |> Vl.encode_field(:x, "total", type: :quantitative)
