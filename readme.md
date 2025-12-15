@@ -19,7 +19,8 @@ mix escript.install hex livebook
 Просто запустите дистрибутив, или пропишите в терминале 
 
 ```sh
-livebook server
+cd tasks_analysis
+livebook server .
 ```
 
 После этого в интерфейсе можно перейти к нужному проекту (Открыть `.livemd` файл)

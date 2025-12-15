@@ -14,6 +14,10 @@ Mix.install([
 
 ## Введение
 
+```elixir
+File.cwd!
+```
+
 Для разработки программного средства для аналитики задач был выбран язык Elixir и проект Livebook.
 
 Для визуализации используется библиотека VegaLite
@@ -36,23 +40,15 @@ IO.puts "Hello, World"
 st
 ```
 
-## 0. Общие для всех запросов параметры
+## 0. Общие для всех запросов параметры. Модуль загрузки данных из Jira
 
 ```elixir
 jira_url = "https://issues.apache.org/jira/rest/api/2"
 kafka = "KAFKA"
 headers = [{"Accept", "application/json"}]
 
-test_url = "#{jira_url}/project/#{kafka}"
+"#{jira_url}/project/#{kafka}"
 ```
-
-## 1. Время, которое задача провела от момента создания до момента закрытия
-
-Построение гистограммы, отражающей время, которое задача провела в
-открытом состоянии (от момента создания до момента закрытия). По оси
-абсцисс – расположить время. По оси ординат – расположить суммарное
-количество задач, которое было в открытом виде соответствующее время. В
-расчет брать только закрытые задачи по проекту;
 
 ```elixir
 defmodule JiraFetcher do
@@ -188,6 +184,14 @@ defmodule JiraFetcher do
 end
 
 ```
+
+## 1. Время, которое задача провела от момента создания до момента закрытия
+
+Построение гистограммы, отражающей время, которое задача провела в
+открытом состоянии (от момента создания до момента закрытия). По оси
+абсцисс – расположить время. По оси ординат – расположить суммарное
+количество задач, которое было в открытом виде соответствующее время. В
+расчет брать только закрытые задачи по проекту;
 
 ```elixir
 all_closed_issues_cache_path = Path.join(File.cwd!(), "all_closed_issues.json") 
@@ -483,10 +487,6 @@ ViewStatusTimeDistribution.get_status_time_distribution(issues_with_history, "Pa
 
 построить график, показывающий количество заведенных и закрытых задач в день. График должен отражать не только информацию о количестве задач в день, но и накопительный итог по задачам. По оси абсцисс – расположить календарные дни. По оси ординат – расположить суммарное количество задач для этого дня (открытые, закрытые и для каждого – накопительный итог);
 
-<!-- livebook:{"break_markdown":true} -->
-
-**Клетка ниже будет загружать данные около 200 секунд, так что просто так её не запускайте**
-
 ```elixir
 all_issues_cache_path = Path.join(File.cwd!(), "all_issues.json") 
 
@@ -617,10 +617,14 @@ defmodule DateRangeFilter do
   end
 end
 
-start_date = "2020-12-01"
+start_date = "2020-09-01"
 finish_date = "2025-12-01"
 {daily_series, cumulative_series} =
   DateRangeFilter.filter_two_arrays(daily_series, cumulative_series, start_date, finish_date)
+
+max_cumulative_value = Enum.max_by(cumulative_series, &(&1.value)).value
+min_cumulative_value = Enum.min_by(cumulative_series, &(&1.value)).value
+
 
 ```
 
@@ -639,7 +643,7 @@ Vl.new(width: 600, height: 300, title: ["Количество открытых �
   Vl.new()
   |> Vl.data_from_values(cumulative_series, only: ["date", "value", "type"])
   |> Vl.mark(:line)
-  |> Vl.encode_field(:y, "value", type: :quantitative, title: "Задач в день накопительно", scale: [domain_min: -2000])
+  |> Vl.encode_field(:y, "value", type: :quantitative, title: "Задач в день накопительно") # , scale: [domain_min: min_cumulative_value, domain_max: max_cumulative_value, range_min: 160]
   |> Vl.encode_field(:color, "type", type: :nominal, title: "Тип задачи"),
 ])
 |> Vl.resolve(:scale, y: :independent)
@@ -745,8 +749,7 @@ end
 ```
 
 ```elixir
-Enum.random(all_issues_with_users)
-Enum.count all_issues_with_users
+Enum.count(all_issues_with_users) |> IO.puts
 valid_all_issues_with_users = Enum.filter(all_issues_with_users, fn issue ->
   reporter = issue["fields"]["reporter"]
   assignee = issue["fields"]["assignee"]
@@ -868,14 +871,14 @@ data_list = Enum.map(issues_per_total_hours, fn {key, value} -> %{hours: key, is
 
 ```
 
-<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6ItCS0YDQtdC80Y8g0YDQsNCx0L7RgtGLINC/0L7Qu9GM0LfQvtCy0LDRgtC10LvQtdC5INC90LDQtCDQt9Cw0LTQsNGH0LDQvNC4IiwiaGVpZ2h0IjpudWxsLCJsYXllcnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6ImJhciIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoiZGF0YV9saXN0IiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoiaG91cnMiLCJ4X2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwieF9maWVsZF9iaW4iOm51bGwsInhfZmllbGRfc2NhbGVfdHlwZSI6bnVsbCwieF9maWVsZF90eXBlIjoicXVhbnRpdGF0aXZlIiwieV9maWVsZCI6Imlzc3VlcyIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjpudWxsLCJ5X2ZpZWxkX3R5cGUiOiJxdWFudGl0YXRpdmUifV0sInZsX2FsaWFzIjoiRWxpeGlyLlZsIiwid2lkdGgiOjI1MH0","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
+<!-- livebook:{"attrs":"eyJjaGFydF90aXRsZSI6ItCS0YDQtdC80Y8g0YDQsNCx0L7RgtGLINC/0L7Qu9GM0LfQvtCy0LDRgtC10LvQtdC5INC90LDQtCDQt9Cw0LTQsNGH0LDQvNC4IiwiaGVpZ2h0IjpudWxsLCJsYXllcnMiOlt7ImFjdGl2ZSI6dHJ1ZSwiY2hhcnRfdHlwZSI6ImJhciIsImNvbG9yX2ZpZWxkIjpudWxsLCJjb2xvcl9maWVsZF9hZ2dyZWdhdGUiOm51bGwsImNvbG9yX2ZpZWxkX2JpbiI6bnVsbCwiY29sb3JfZmllbGRfc2NhbGVfc2NoZW1lIjpudWxsLCJjb2xvcl9maWVsZF90eXBlIjpudWxsLCJkYXRhX3ZhcmlhYmxlIjoiZGF0YV9saXN0IiwiZ2VvZGF0YV9jb2xvciI6ImJsdWUiLCJsYXRpdHVkZV9maWVsZCI6bnVsbCwibG9uZ2l0dWRlX2ZpZWxkIjpudWxsLCJ4X2ZpZWxkIjoiaG91cnMiLCJ4X2ZpZWxkX2FnZ3JlZ2F0ZSI6bnVsbCwieF9maWVsZF9iaW4iOm51bGwsInhfZmllbGRfc2NhbGVfdHlwZSI6bnVsbCwieF9maWVsZF90eXBlIjoicXVhbnRpdGF0aXZlIiwieV9maWVsZCI6Imlzc3VlcyIsInlfZmllbGRfYWdncmVnYXRlIjpudWxsLCJ5X2ZpZWxkX2JpbiI6bnVsbCwieV9maWVsZF9zY2FsZV90eXBlIjoibGluZWFyIiwieV9maWVsZF90eXBlIjoicXVhbnRpdGF0aXZlIn1dLCJ2bF9hbGlhcyI6IkVsaXhpci5WbCIsIndpZHRoIjoyNTB9","chunks":null,"kind":"Elixir.KinoVegaLite.ChartCell","livebook_object":"smart_cell"} -->
 
 ```elixir
 Vl.new(width: 250, title: "Время работы пользователей над задачами")
 |> Vl.data_from_values(data_list, only: ["hours", "issues"])
 |> Vl.mark(:bar)
 |> Vl.encode_field(:x, "hours", type: :quantitative)
-|> Vl.encode_field(:y, "issues", type: :quantitative)
+|> Vl.encode_field(:y, "issues", type: :quantitative, scale: [type: :linear])
 ```
 
 ## 6. Задачи по приоритетам
